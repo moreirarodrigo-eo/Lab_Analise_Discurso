@@ -14,7 +14,6 @@
         body { background-color: #f4f6f9; }
         .sidebar { height: 100%; border-right: 1px solid #dee2e6; }
         .cloud { width: 100%; height: 400px; }
-        /* Altura fixa de 550px aplicada para evitar bugs no motor de física do Vis.js */
         .chart, .network-container { width: 100%; height: 550px; background: #fff; border: 1px solid #dee2e6; border-radius: 5px; }
         .metric { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
@@ -51,21 +50,13 @@
                     </div>
                     <input id="excluir" class="form-control mt-2 form-control-sm" placeholder="Excluir palavras (separadas por vírgula)">
                     
-                    <div class="row mt-3">
-                        <div class="col">
-                            <label>Janela KWIC</label>
-                            <select id="janela" class="form-select">
-                                <option>3</option><option selected>5</option><option>10</option>
-                            </select>
-                        </div>
-                        <div class="col">
-                            <label>N-grama</label>
-                            <select id="ng" class="form-select">
-                                <option value="1">Uni</option><option value="2">Bi</option><option value="3">Tri</option>
-                            </select>
-                        </div>
+                    <div class="mt-3">
+                        <label>N-grama</label>
+                        <select id="ng" class="form-select">
+                            <option value="1">Uni</option><option value="2">Bi</option><option value="3">Tri</option>
+                        </select>
                     </div>
-                    <input id="termo" class="form-control mt-3" placeholder="Termo para KWIC">
+                    
                     <button id="limpar" class="btn btn-outline-danger w-100 mt-4">🗑️ Limpar Tudo</button>
                 </div>
             </div>
@@ -131,11 +122,30 @@
                 </div>
 
                 <div class="tab-pane fade" id="kwic">
-                    <button id="btnKwic" class="btn btn-primary mb-3">▶ Buscar Contexto (KWIC)</button>
+                    <!-- Controles KWIC movidos para a aba -->
+                    <div class="row g-2 mb-3 align-items-center">
+                        <div class="col-md-5">
+                            <input id="termo" class="form-control" placeholder="Termo para buscar o contexto...">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">Janela de Palavras</span>
+                                <select id="janela" class="form-select">
+                                    <option value="3">3</option>
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button id="btnKwic" class="btn btn-primary w-100">▶ Buscar KWIC</button>
+                        </div>
+                    </div>
+                    
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <table id="kwTable" class="table table-striped w-100">
-                                <thead><tr><th>Anterior</th><th>Termo</th><th>Posterior</th></tr></thead><tbody></tbody>
+                                <thead><tr><th class="text-end">Anterior</th><th class="text-center">Termo</th><th>Posterior</th></tr></thead><tbody></tbody>
                             </table>
                         </div>
                     </div>
@@ -282,8 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!updateBase()) return alert('Insira um texto no corpus.');
         let total = S.freq.reduce((a,b)=>a+b.n,0), a = S.freq.slice(0, 20).reverse();
         mk('freqChart','bar',{labels: a.map(x=>x.palavra),datasets:[{data: a.map(x=>x.n), backgroundColor:'#2C3E50'}]},{indexAxis:'y',plugins:{legend:{display:false}}});
+        
+        // Destrói a tabela antes de atualizar os dados
+        if(window.freqT) { window.freqT.destroy(); }
         document.querySelector('#freqTable tbody').innerHTML = S.freq.map(x => `<tr><td>${esc(x.palavra)}</td><td>${x.n}</td><td>${((x.n/total)*100).toFixed(2)}%</td></tr>`).join('');
-        if(window.freqT) window.freqT.destroy(); window.freqT = new DataTable('#freqTable',{pageLength: 10, lengthChange: false});
+        window.freqT = new DataTable('#freqTable',{pageLength: 10, lengthChange: false});
     };
 
     document.getElementById('btnNgram').onclick = function() {
@@ -291,8 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
         S.ngr = ng(selected(S.text), +document.getElementById('ng').value);
         let total = S.ngr.reduce((a,b)=>a+b.n, 0) || 1, a = S.ngr.slice(0, 20).reverse();
         mk('ngChart','bar',{labels: a.map(x=>x.grama),datasets:[{data:a.map(x=>x.n), backgroundColor:'#536878'}]},{indexAxis:'y',plugins:{legend:{display:false}}});
+        
+        // Destrói a tabela antes de atualizar os dados
+        if(window.ngT) { window.ngT.destroy(); }
         document.querySelector('#ngTable tbody').innerHTML = S.ngr.map(x => `<tr><td>${esc(x.grama)}</td><td>${x.n}</td><td>${((x.n/total)*100).toFixed(2)}%</td></tr>`).join('');
-        if(window.ngT) window.ngT.destroy(); window.ngT = new DataTable('#ngTable',{pageLength:10, lengthChange:false});
+        window.ngT = new DataTable('#ngTable',{pageLength:10, lengthChange:false});
     };
 
     document.getElementById('btnKwic').onclick = function() {
@@ -300,10 +316,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let term = norm(document.getElementById('termo').value);
         if(!term) return alert('Insira um termo para buscar o contexto.');
         let w = +document.getElementById('janela').value, a = toks(S.text), rows=[];
+        
         a.forEach((x,i)=>{ if(norm(x)===term) rows.push({pre:a.slice(Math.max(0,i-w),i).join(' '), keyword:x, post:a.slice(i+1,i+w+1).join(' ')}); });
         S.kw = rows;
+        
+        // Correção aplicada: Primeiro destrói a tabela (DataTables API), insere os novos dados, e só então a recria.
+        if(window.kwT) { window.kwT.destroy(); }
         document.querySelector('#kwTable tbody').innerHTML = rows.length ? rows.map(x => `<tr><td class="text-end">${esc(x.pre)}</td><td class="text-center text-primary"><b>${esc(x.keyword)}</b></td><td>${esc(x.post)}</td></tr>`).join('') : '<tr><td colspan="3" class="text-center">Termo não encontrado no corpus.</td></tr>';
-        if(window.kwT) window.kwT.destroy(); window.kwT = new DataTable('#kwTable',{pageLength:10, lengthChange:false, ordering:false});
+        window.kwT = new DataTable('#kwTable',{pageLength:10, lengthChange:false, ordering:false});
     };
 
     document.getElementById('codificar').onclick = function() {
