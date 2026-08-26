@@ -14,7 +14,8 @@
         body { background-color: #f4f6f9; }
         .sidebar { height: 100%; border-right: 1px solid #dee2e6; }
         .cloud { width: 100%; height: 400px; }
-        .chart, .network-container { width: 100%; min-height: 400px; background: #fff; border: 1px solid #dee2e6; border-radius: 5px; }
+        /* Altura fixa de 550px aplicada para evitar bugs no motor de física do Vis.js */
+        .chart, .network-container { width: 100%; height: 550px; background: #fff; border: 1px solid #dee2e6; border-radius: 5px; }
         .metric { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
@@ -192,7 +193,7 @@
     </div>
 </div>
 
-<!-- JS Dependencies (Ordem importa!) -->
+<!-- JS Dependencies -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -208,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const verbSuffixes = /(ando|endo|indo|ado|ido|ava|avam|aria|asse|esse|isse|[aei]r)$/i;
 
     function norm(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') }
-    // Regex ajustada para evitar erros em navegadores antigos (substitui \p{L} por escopo a-z)
     function toks(s) { return s.replace(/[“”"‘’]/g, '').split(/\s+/).map(x => x.replace(/^[^a-zA-Z0-9À-ÿ-]+|[^a-zA-Z0-9À-ÿ-]+$/g, '')).filter(Boolean) }
 
     function bard(x) { 
@@ -334,7 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnRede').onclick = function() {
         if(!updateBase()) return alert('Insira um texto no corpus.');
         let { topWords, edgesMap } = getCooccurrenceEdges(30);
-        let nodes = topWords.map((w, i) => ({ id: w, label: w, value: S.freq[i].n, font: { size: 16 } }));
+        
+        let nodes = topWords.map((w, i) => ({ 
+            id: w, 
+            label: w, 
+            value: S.freq[i].n, 
+            title: `Frequência: ${S.freq[i].n}` 
+        }));
+        
         let edges = [...edgesMap].map(([pair, weight]) => {
             let [from, to] = pair.split('-');
             return { from, to, value: weight, title: `Ocorrências conjuntas: ${weight}` };
@@ -342,33 +349,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let container = document.getElementById('networkMap');
         if (networkInstance) networkInstance.destroy();
+        
         networkInstance = new vis.Network(container, { nodes, edges }, {
-            nodes: { shape: 'dot', color: { background: '#97C2FC', border: '#2B7CE9' } },
+            nodes: { 
+                shape: 'dot', 
+                scaling: { min: 15, max: 45, label: { min: 14, max: 24, drawThreshold: 4 } },
+                color: { background: '#97C2FC', border: '#2B7CE9' } 
+            },
             edges: { color: '#cccccc', smooth: false },
-            physics: { stabilization: true, barnesHut: { gravitationalConstant: -3000 } }
+            physics: { 
+                stabilization: { iterations: 200 },
+                barnesHut: { gravitationalConstant: -3000, springLength: 150 }
+            }
         });
+
+        setTimeout(() => networkInstance.fit(), 300);
     };
 
     document.getElementById('btnCluster').onclick = function() {
         if(!updateBase()) return alert('Insira um texto no corpus.');
         let { topWords, edgesMap } = getCooccurrenceEdges(15);
-        let nodes = topWords.map(w => ({ id: w, label: w, group: 'leaf', shape: 'box' }));
+        
+        let nodes = topWords.map(w => ({ id: w, label: w, group: 'leaf', shape: 'box', font: { size: 18 } }));
         let edges = [];
         let clusters = topWords.map(w => [w]);
         let clusterId = 0;
 
         let sortedEdges = [...edgesMap].sort((a, b) => b[1] - a[1]);
+        
         sortedEdges.forEach(([pair, weight]) => {
             let [w1, w2] = pair.split('-');
             let c1 = clusters.findIndex(c => c.includes(w1));
             let c2 = clusters.findIndex(c => c.includes(w2));
+            
             if (c1 !== c2 && c1 !== -1 && c2 !== -1) {
                 let newClusterName = `Cluster_${clusterId++}`;
-                nodes.push({ id: newClusterName, label: '', shape: 'dot', size: 5, color: '#555' });
+                nodes.push({ id: newClusterName, label: '', shape: 'dot', size: 12, color: '#888' });
                 edges.push({ from: newClusterName, to: clusters[c1][0] });
                 edges.push({ from: newClusterName, to: clusters[c2][0] });
+                
                 let merged = [...clusters[c1], ...clusters[c2]];
                 merged.unshift(newClusterName); 
+                
                 clusters = clusters.filter((_, i) => i !== c1 && i !== c2);
                 clusters.push(merged);
             }
@@ -376,11 +398,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let container = document.getElementById('dendrogramMap');
         if (dendroInstance) dendroInstance.destroy();
+        
         dendroInstance = new vis.Network(container, { nodes, edges }, {
-            layout: { hierarchical: { direction: 'UD', sortMethod: 'directed', levelSeparation: 80 } },
+            layout: { 
+                hierarchical: { direction: 'UD', sortMethod: 'directed', levelSeparation: 120, nodeSpacing: 150 } 
+            },
             edges: { color: '#888', smooth: { type: 'cubicBezier' } },
             physics: false
         });
+
+        setTimeout(() => dendroInstance.fit(), 300);
     };
 
     document.getElementById('limpar').onclick = () => { document.getElementById('texto').value = ''; S = {text:'', freq:[], ngr:[], kw:[]}; };
