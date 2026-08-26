@@ -7,227 +7,173 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/standalone/umd/vis-network.min.js"></script>
+    <!-- Biblioteca Vis.js para Redes e Dendograma -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        .cloud { width: 100%; height: 450px; position: relative; }
-        .chart { min-height: 350px; }
-        .network-container { width: 100%; height: 500px; border: 1px solid #dee2e6; border-radius: .375rem; background: #fff; }
-        .dendro-container { width: 100%; height: 450px; border: 1px solid #dee2e6; border-radius: .375rem; background: #fff; overflow: auto; }
+        .cloud { width: 100%; height: 400px; }
+        .chart, .network-container { width: 100%; min-height: 400px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; }
     </style>
 </head>
 <body>
 <nav class="navbar navbar-dark bg-primary">
-    <div class="container-fluid"><span class="navbar-brand">💬 Laboratório de Análise de Discurso & PLN (Dutt-Ross & Cruz, 2021)</span></div>
+    <div class="container-fluid"><span class="navbar-brand">💬 Laboratório de Análise de Discurso & PLN</span></div>
 </nav>
 
 <div class="container-fluid p-3">
     <div class="row g-3">
-        
-        <!-- SIDEBAR DE CONFIGURAÇÃO -->
         <aside class="col-lg-3">
             <div class="card shadow-sm sidebar">
                 <div class="card-body">
                     <h6>Corpus</h6>
-                    <textarea id="texto" class="form-control" rows="10" placeholder="Cole a transcrição ou textos..."></textarea>
+                    <textarea id="texto" class="form-control" rows="8" placeholder="Cole a transcrição..."></textarea>
                     <input id="file" type="file" accept=".txt,.csv" class="form-control mt-2">
                     <hr>
-                    <h6>Filtros Gramaticais (Art. 1859)</h6>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkPronomes" checked><label class="form-check-label small" for="chkPronomes">Remover Pronomes</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkArtigos" checked><label class="form-check-label small" for="chkArtigos">Remover Artigos</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkNumerais" checked><label class="form-check-label small" for="chkNumerais">Remover Numerais</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkPreposicoes" checked><label class="form-check-label small" for="chkPreposicoes">Remover Preposições</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkConjuncoes" checked><label class="form-check-label small" for="chkConjuncoes">Remover Conjunções</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkInterjeicoes" checked><label class="form-check-label small" for="chkInterjeicoes">Remover Interjeições</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chkAdverbios" checked><label class="form-check-label small" for="chkAdverbios">Remover Advérbios</label></div>
-                    
-                    <div class="mt-2">
-                        <label class="form-label small fw-bold">Verbos:</label>
-                        <select id="selVerbos" class="form-select form-select-sm">
-                            <option value="manter" selected>Manter Verbos</option>
-                            <option value="remover">Remover Verbos</option>
-                            <option value="apenas">Apenas Verbos</option>
-                        </select>
+                    <h6>Pré-processamento</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" name="metodo" type="radio" value="bardin" checked>
+                        <label class="form-check-label">Bardin — aproximação</label>
                     </div>
-
-                    <input id="excluir" class="form-control mt-2 form-control-sm" placeholder="Outras palavras para excluir (vírgula)">
+                    <div class="form-check">
+                        <input class="form-check-input" name="metodo" type="radio" value="pln">
+                        <label class="form-check-label">PLN — stopwords</label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="removerVerbos">
+                        <label class="form-check-label text-danger">Remover verbos comuns</label>
+                    </div>
+                    <input id="excluir" class="form-control mt-2 form-control-sm" placeholder="Excluir palavras (separadas por vírgula)">
                     
                     <div class="row mt-3">
                         <div class="col">
-                            <label class="small">Janela KWIC</label>
-                            <select id="janela" class="form-select form-select-sm">
-                                <option>3</option><option selected>5</option><option>10</option><option>15</option>
+                            <label>Janela KWIC</label>
+                            <select id="janela" class="form-select">
+                                <option>3</option><option selected>5</option><option>10</option>
                             </select>
                         </div>
                         <div class="col">
-                            <label class="small">N-grama</label>
-                            <select id="ng" class="form-select form-select-sm">
+                            <label>N-grama</label>
+                            <select id="ng" class="form-select">
                                 <option value="1">Uni</option><option value="2">Bi</option><option value="3">Tri</option>
                             </select>
                         </div>
                     </div>
-                    <input id="termo" class="form-control mt-3 form-control-sm" placeholder="Termo para KWIC">
-                    <button id="limpar" class="btn btn-outline-danger w-100 mt-3 btn-sm">Limpar Tudo</button>
+                    <input id="termo" class="form-control mt-3" placeholder="Termo para KWIC">
+                    <button id="limpar" class="btn btn-outline-danger w-100 mt-4">Limpar Tudo</button>
                 </div>
             </div>
         </aside>
 
-        <!-- ÁREA PRINCIPAL COM AS ABAS -->
         <main class="col-lg-9">
-            <ul class="nav nav-tabs flex-wrap" id="mainTabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#nuvem">Nuvem de Palavras</button></li>
+            <ul class="nav nav-tabs flex-wrap">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#nuvem">Nuvem</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visao">Visão Geral</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#freq">Frequência</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ngram">N-gramas</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#kwic">KWIC</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cooc">Correlação (Rede)</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#dendro">Dendrograma</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tema">Temas</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#exp">Exportar</button></li>
+                <li class="nav-item"><button class="nav-link text-success" data-bs-toggle="tab" data-bs-target="#rede">Coocorrência</button></li>
+                <li class="nav-item"><button class="nav-link text-success" data-bs-toggle="tab" data-bs-target="#cluster">Dendograma</button></li>
+                <li class="nav-item"><button class="nav-link text-primary" data-bs-toggle="tab" data-bs-target="#exp">Exportar</button></li>
             </ul>
             
             <div class="tab-content pt-3">
                 
-                <!-- ABA 1: NUVEM DE PALAVRAS -->
                 <div class="tab-pane fade show active" id="nuvem">
-                    <button id="btnNuvem" class="btn btn-primary mb-3">▶ Executar Nuvem de Palavras</button>
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Nuvem de Palavras</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportPNG('cloudCanvas', 'nuvem_palavras.png')">Exportar PNG (300 DPI)</button>
-                        </div>
-                        <div class="card-body">
-                            <div id="cloud" class="cloud"></div>
-                        </div>
-                    </div>
+                    <button id="btnNuvem" class="btn btn-primary mb-3">▶ Gerar Nuvem de Palavras</button>
+                    <div class="card"><div class="card-body"><div id="cloud" class="cloud"></div></div></div>
                 </div>
 
-                <!-- ABA 2: VISÃO GERAL -->
                 <div class="tab-pane fade" id="visao">
-                    <button id="btnVisao" class="btn btn-primary mb-3">▶ Executar Visão Geral</button>
+                    <button id="btnVisao" class="btn btn-primary mb-3">▶ Calcular Métricas</button>
                     <div id="metricas" class="row g-3"></div>
                     <div class="card mt-3">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Perfil Lexical</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportChartPNG(C['perfil'], 'perfil_lexical.png')">Exportar PNG (300 DPI)</button>
-                        </div>
+                        <div class="card-header">Perfil lexical</div>
                         <div class="card-body chart"><canvas id="perfil"></canvas></div>
                     </div>
                 </div>
 
-                <!-- ABA 3: FREQUÊNCIA -->
                 <div class="tab-pane fade" id="freq">
-                    <button id="btnFreq" class="btn btn-primary mb-3">▶ Executar Frequências</button>
+                    <button id="btnFreq" class="btn btn-primary mb-3">▶ Extrair Frequências</button>
                     <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>20 Termos Mais Frequentes</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportChartPNG(C['freqChart'], 'frequencia_grafico.png')">Exportar PNG (300 DPI)</button>
-                        </div>
+                        <div class="card-header">20 termos mais frequentes</div>
                         <div class="card-body chart"><canvas id="freqChart"></canvas></div>
                     </div>
                     <div class="card mt-3">
-                        <div class="card-header">Tabela de Frequência Absoluta e Relativa (%)</div>
                         <div class="card-body">
-                            <table id="freqTable" class="table table-striped mt-3 w-100">
-                                <thead><tr><th>Palavra</th><th>Frequência Absoluta</th><th>Frequência Relativa (%)</th></tr></thead>
-                                <tbody></tbody>
+                            <table id="freqTable" class="table table-striped w-100">
+                                <thead><tr><th>Palavra</th><th>Frequência</th><th>%</th></tr></thead><tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- ABA 4: N-GRAMAS -->
                 <div class="tab-pane fade" id="ngram">
-                    <button id="btnNgram" class="btn btn-primary mb-3">▶ Executar N-gramas</button>
+                    <button id="btnNgram" class="btn btn-primary mb-3">▶ Gerar N-gramas</button>
                     <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Expressões Recorrentes (Bigramas/Trigramas)</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportChartPNG(C['ngChart'], 'ngramas_grafico.png')">Exportar PNG (300 DPI)</button>
-                        </div>
                         <div class="card-body chart"><canvas id="ngChart"></canvas></div>
                     </div>
-                    <div class="card mt-3">
-                        <div class="card-header">Tabela de N-gramas (Frequência e %)</div>
-                        <div class="card-body">
-                            <table id="ngTable" class="table table-striped mt-3 w-100">
-                                <thead><tr><th>Expressão</th><th>Frequência Absoluta</th><th>Frequência Relativa (%)</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <table id="ngTable" class="table table-striped mt-3">
+                        <thead><tr><th>Expressão</th><th>Frequência</th><th>%</th></tr></thead><tbody></tbody>
+                    </table>
                 </div>
 
-                <!-- ABA 5: KWIC -->
                 <div class="tab-pane fade" id="kwic">
-                    <button id="btnKwic" class="btn btn-primary mb-3">▶ Executar Busca em Contexto (KWIC)</button>
+                    <button id="btnKwic" class="btn btn-primary mb-3">▶ Buscar Contexto (KWIC)</button>
                     <div class="card">
-                        <div class="card-header">Palavra-chave em Contexto (KWIC)</div>
                         <div class="card-body">
-                            <table id="kwTable" class="table table-striped w-100">
-                                <thead><tr><th>Anterior</th><th>Termo</th><th>Posterior</th></tr></thead>
-                                <tbody></tbody>
+                            <table id="kwTable" class="table table-striped">
+                                <thead><tr><th>Anterior</th><th>Termo</th><th>Posterior</th></tr></thead><tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- ABA 6: CORRELAÇÃO DE PALAVRAS (REDE DE COOCORRÊNCIAS) -->
-                <div class="tab-pane fade" id="cooc">
-                    <button id="btnCooc" class="btn btn-primary mb-3">▶ Executar Rede de Correlação de Palavras</button>
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Rede de Correlação de Palavras (Coocorrência)</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportNetworkPNG()">Exportar PNG (300 DPI)</button>
-                        </div>
-                        <div class="card-body">
-                            <div id="networkContainer" class="network-container"></div>
-                            <p class="small text-secondary mt-2">A rede de coocorrência agrupa termos que aparecem regularmente próximos uns dos outros no corpus (Dutt-Ross & Cruz, 2021).</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ABA 7: DENDROGRAMA (ANÁLISE DE CLUSTER) -->
-                <div class="tab-pane fade" id="dendro">
-                    <button id="btnDendro" class="btn btn-primary mb-3">▶ Executar Análise de Cluster / Dendrograma</button>
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>Dendrograma de Agrupamento Hierárquico</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportDendroPNG()">Exportar PNG (300 DPI)</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="dendro-container p-3 text-center">
-                                <canvas id="dendroCanvas" width="800" height="400" style="width:100%; height:auto;"></canvas>
-                            </div>
-                            <div id="clusterInfo" class="mt-3 small text-muted"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ABA 8: TEMAS -->
                 <div class="tab-pane fade" id="tema">
                     <div class="card">
-                        <div class="card-header">Codificação Temática Assistida</div>
                         <div class="card-body">
-                            <p>Digite categorias separadas por vírgula. Ex.: clima, território, economia, políticas públicas, ensino, pesquisa.</p>
-                            <input id="cats" class="form-control" value="ensino, pesquisa, curso, edital, restaurante, saúde">
-                            <button id="codificar" class="btn btn-primary mt-3">▶ Executar Codificação Temática</button>
-                            <table id="codTable" class="table table-striped mt-3 w-100">
-                                <thead><tr><th>Categoria</th><th>Ocorrências</th><th>Trechos</th></tr></thead>
-                                <tbody></tbody>
+                            <p>Digite categorias separadas por vírgula. Ex.: políticas públicas, território, economia.</p>
+                            <input id="cats" class="form-control">
+                            <button id="codificar" class="btn btn-primary mt-3">▶ Gerar Códigos Temáticos</button>
+                            <table id="codTable" class="table table-striped mt-3">
+                                <thead><tr><th>Categoria</th><th>Ocorrências</th><th>Trechos</th></tr></thead><tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- ABA 9: EXPORTAR -->
+                <!-- Nova Aba: Rede de Coocorrência -->
+                <div class="tab-pane fade" id="rede">
+                    <button id="btnRede" class="btn btn-success mb-3">▶ Gerar Rede de Coocorrência</button>
+                    <div class="card">
+                        <div class="card-header">Rede de Associação Estatística de Palavras</div>
+                        <div class="card-body p-0">
+                            <div id="networkMap" class="network-container border-0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nova Aba: Dendograma -->
+                <div class="tab-pane fade" id="cluster">
+                    <button id="btnCluster" class="btn btn-success mb-3">▶ Gerar Dendograma (Cluster)</button>
+                    <div class="card">
+                        <div class="card-header">Análise de Clusterização Hierárquica</div>
+                        <div class="card-body p-0">
+                            <div id="dendrogramMap" class="network-container border-0"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="tab-pane fade" id="exp">
                     <div class="card">
-                        <div class="card-header">Exportação de Dados e Relatórios</div>
+                        <div class="card-header">Exportação de Alta Qualidade (300dpi est.)</div>
                         <div class="card-body">
                             <button id="exFreq" class="btn btn-outline-primary m-1">CSV — Frequência</button>
                             <button id="exNg" class="btn btn-outline-primary m-1">CSV — N-gramas</button>
                             <button id="exKw" class="btn btn-outline-primary m-1">CSV — KWIC</button>
-                            <button id="exHtml" class="btn btn-outline-secondary m-1">Relatório HTML (com Tabelas)</button>
+                            <hr>
+                            <button id="exPngCharts" class="btn btn-primary m-1">Baixar Gráficos (PNG Alta Resolução)</button>
+                            <button id="exHtml" class="btn btn-success m-1">Exportar Relatório HTML Completo</button>
                         </div>
                     </div>
                 </div>
